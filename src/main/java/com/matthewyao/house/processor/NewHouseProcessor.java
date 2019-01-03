@@ -1,7 +1,11 @@
 package com.matthewyao.house.processor;
 
 import com.alibaba.fastjson.JSONObject;
+import com.matthewyao.house.util.MailConfig;
+import com.matthewyao.house.util.MailUtil;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -17,34 +21,23 @@ import us.codecraft.webmagic.proxy.SimpleProxyProvider;
 import us.codecraft.webmagic.selector.Selectable;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
  * @Author: yaokuan
  * @Date: 2018/12/30 下午2:56
  */
-public class HousePageProcessor implements PageProcessor {
+public class NewHouseProcessor implements PageProcessor {
 
     private Site site = Site.me().setRetryTimes(3).setSleepTime(600).setTimeOut(10000);
 
-    private static final int TOTAL_SPIDER_PAGE = 13;
-
-    private static final int TOTAL_PROXY_SIZE = 50;
-
-    private static File file = new File("/Users/yaokuan/Mine/house/result");
-
+    private static final int TOTAL_PROXY_SIZE = 20;
 
     @Override
     public void process(Page page) {
-        if (page.getUrl().regex(".*index.*").match()) {
-            String baseUrl = "http://www.shcngz.com/pages/news_list.aspx?mid=29&pageid=";
-            List<String> urls = new ArrayList<>();
-            for (int i = 1; i <= TOTAL_SPIDER_PAGE; i++) {
-                urls.add(baseUrl + i);
-            }
-            page.addTargetRequests(urls);
-        }else {
             String type = page.getUrl().regex(".*news_(\\w+).aspx.*").toString();
             if (type.equals("list")) {
                 List<String> allLinks = page.getHtml()
@@ -52,7 +45,7 @@ public class HousePageProcessor implements PageProcessor {
                         .regex(".*news_detail.*")
                         .all();
                 if (CollectionUtils.isNotEmpty(allLinks)) {
-                    page.addTargetRequests(allLinks);
+                    page.addTargetRequests(allLinks.subList(0, 1));
                 }
             } else if (type.equals("detail")) {
                 Selectable content = page.getHtml().$(".news_detail");
@@ -64,32 +57,17 @@ public class HousePageProcessor implements PageProcessor {
                     String count = content.regex("[\\u4e00-\\u9fa5|>](\\d+)(<.*>)?套房源").toString();
                     System.out.println(String.format(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s %s %s", pageId, date, name, count));
                     StringBuffer sb = new StringBuffer();
-                    sb.append(pageId).append("\t").append(date).append("\t").append(name).append("\t").append(count).append("\n");
-                    writeToFile(sb);
+                    sb.append(pageId).append("\n").append(date).append("\n").append(name).append("\n").append(count).append("\n");
+                    String today = DateFormatUtils.format(new Date(), "yyyy-MM-dd");
+                    if (today.equalsIgnoreCase(date)) {
+                        MailUtil.sendMail("公租房今日房源信息", sb.toString());
+                    }else {
+                        MailUtil.sendMail( "暂无新房源信息", "无今日开放房源信息，请耐心等待2小时后再次获取");
+                    }
                 }else {
-                    StringBuffer sb = new StringBuffer();
-                    sb.append(pageId).append("\t").append("无关页面\n");
-                    writeToFile(sb);
+                    MailUtil.sendMail("暂无新房源信息", "最新的新闻非房源开发信息，请耐心等待2小时后再次获取");
                 }
             }
-        }
-    }
-
-    private void writeToFile(StringBuffer sb) {
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(file, true);
-            fw.append(sb.toString());
-            fw.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-            try {
-                fw.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     @Override
@@ -122,16 +100,18 @@ public class HousePageProcessor implements PageProcessor {
         return downloader;
     }
 
-    public static void main(String[] args) throws IOException {
-        if (file.exists()) {
-            file.delete();
+    public static void start() {
+        HttpClientDownloader downloader = null;
+        try {
+            downloader = getHttpClientDownloader();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        HttpClientDownloader downloader = getHttpClientDownloader();
 
-        Spider.create(new HousePageProcessor())
-//                .addUrl("http://www.shcngz.com/pages/news_detail.aspx?newsid=738")
-                .addUrl("http://www.shcngz.com/pages/index.aspx")
+        Spider.create(new NewHouseProcessor())
+                .addUrl("http://www.shcngz.com/pages/news_list.aspx?mid=29&pageid=1")
                 .setDownloader(downloader)
                 .thread(3).run();
     }
+
 }
