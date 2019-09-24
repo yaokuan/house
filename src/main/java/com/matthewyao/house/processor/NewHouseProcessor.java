@@ -51,21 +51,25 @@ public class NewHouseProcessor implements PageProcessor {
                 Selectable content = page.getHtml().$(".news_detail");
                 boolean need = content.$("h4").regex(".*(选房的通知|房源供应).*").match();
                 String pageId = page.getUrl().regex(".*newsid=(\\d*)").toString();
-                if (need) {
-                    String date = content.$("h5").regex(".*(\\d{4}\\-\\d{2}\\-\\d{2}).*").toString();
-                    String name = content.regex(".*(.{2}(公寓|小区)|古北路项目|华东化工大厦).*").toString();
-                    String count = content.regex("[\\u4e00-\\u9fa5|>](\\d+)(<.*>)?套房源").toString();
-                    System.out.println(String.format(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s %s %s", pageId, date, name, count));
-                    StringBuffer sb = new StringBuffer();
-                    sb.append(pageId).append("\n").append(date).append("\n").append(name).append("\n").append(count).append("\n");
-                    String today = DateFormatUtils.format(new Date(), "yyyy-MM-dd");
-                    if (today.equalsIgnoreCase(date)) {
+
+                StringBuffer sb = new StringBuffer();
+                String date = content.$("h5").regex(".*(\\d{4}\\-\\d{2}\\-\\d{2}).*").toString();
+                String today = DateFormatUtils.format(new Date(), "yyyy-MM-dd");
+                if (today.equalsIgnoreCase(date)) {
+                    //是今天更新的新闻
+                    if (need) {
+                        //是房源开放新闻
+                        String name = content.regex(".*(.{2}(公寓|小区)|古北路项目|华东化工大厦).*").toString();
+                        String count = content.regex("[\\u4e00-\\u9fa5|>](\\d+)(<.*>)?套房源").toString();
+                        System.out.println(String.format(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s %s %s", pageId, date, name, count));
+                        sb.append(pageId).append("\n").append(date).append("\n").append(name).append("\n").append(count).append("\n");
                         MailUtil.sendMail("公租房今日房源信息", sb.toString());
                     }else {
-                        MailUtil.sendMail( "暂无新房源信息", "无今日开放房源信息，请耐心等待2小时后再次获取");
+                        //非房源开放新闻
+                        MailUtil.sendMail("暂无新房源信息", "最新的新闻非房源开放信息，请耐心等待2小时后再次获取");
                     }
                 }else {
-                    MailUtil.sendMail("暂无新房源信息", "最新的新闻非房源开发信息，请耐心等待2小时后再次获取");
+                    MailUtil.sendMail( "暂无新房源信息", "暂无今日新闻");
                 }
             }
     }

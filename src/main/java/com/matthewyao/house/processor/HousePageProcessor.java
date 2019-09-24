@@ -32,7 +32,7 @@ public class HousePageProcessor implements PageProcessor {
 
     private static final int TOTAL_PROXY_SIZE = 50;
 
-    private static File file = new File("/Users/yaokuan/Mine/house/result");
+    private static File file = new File("/result");
 
 
     @Override

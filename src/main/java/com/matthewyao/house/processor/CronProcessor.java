@@ -24,7 +24,11 @@ public class CronProcessor {
     }
 
     public static void start() {
-        service.scheduleAtFixedRate(new HouseTask(), 1, 30, TimeUnit.SECONDS);
+        service.scheduleAtFixedRate(new HouseTask(), 1, 60 * 2
+                , TimeUnit.MINUTES);
     }
 
 }
+
+
+
